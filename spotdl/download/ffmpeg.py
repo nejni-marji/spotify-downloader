@@ -80,6 +80,30 @@ async def convert(
     else:
         output_format_command = formats[output_format]
 
+    #! Different audio codecs use the "quality" setting differently.
+    #!
+    #! For mp3: 0 is the highest quality, and 9 is the lowest.
+    #! For vorbis: 0 is the lowest quality, and 10 is the highest.
+    #!
+    #! By default, vorbis uses 3, which is fine when ripping a CD, but not good for
+    #! transcoding from a lossy format. I have found that using 5 works well to mitigate
+    #! compound losses from lossy-to-lossy transcodes without taking up too much space.
+    #!
+    #! Also, about m4a, aka AAC... I can't find any strict documentation for how it uses
+    #! the "quality" setting. By default, it wants to use 128 kb/s rather than any quality
+    #! setting, and personally, I don't see any reason to change that. For later
+    #! reference, 128 kb/s lies somewhere between quality 1 and 2.
+    #!
+    #! For all other codecs, 0 is interpreted as a null/default value, which I believe to
+    #! be acceptable.
+
+    if output_format == "ogg":
+        output_quality_command = ["-q:a", "5"]
+    elif output_format == "m4a":
+        output_quality_command = []
+    else:
+        output_quality_command = ["-q:a", "0"]
+
     if ffmpeg_path is None:
         ffmpeg_path = "ffmpeg"
 
@@ -89,8 +113,7 @@ async def convert(
         *output_format_command,
         "-abr",
         "true",
-        "-q:a",
-        "0",
+        *output_quality_command,
         "-v",
         "debug",
         converted_file_path,
